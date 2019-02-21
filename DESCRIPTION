@@ -1,0 +1,34 @@
+Package: Noble
+Type: Package
+Title: Work With NEON Project Instrumented Data
+Version: 0.3.9
+Author: Robert Lee
+Maintainer: Robert Lee <rlee@battelleecology.org>
+Description: Work with data from the NEON project's instrumented data, from terrestrial and aquatic sites. With Noble, you can return data for individual data products or families of products, check for missing data, plot wind rose from the 2D Wind Data product, and much more.  
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
+biocViews:
+Imports: 
+    circular,
+    gridExtra, 
+    gtools,
+    plyr, 
+    reshape2, 
+    rjson,
+    GeoLight,
+    geosphere,
+    metScanR,
+    Rhdf5lib,
+    rhdf5,
+    lubridate,
+    jsonlite,
+    ggplot2,
+    magrittr,
+    data.table,
+    dplyr,
+    httr,
+    zoo,
+    stringr,
+    RNRCS
