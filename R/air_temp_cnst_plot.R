@@ -33,7 +33,7 @@ air.temp.cnst.plot=function(site, bgn.month, end.month, save.dir){
     T1=NULL
     T2=NULL
 
-    num.mls=Noble::tis_site_config$Num.of.MLs[site==Noble::tis_site_config$SiteID]
+    num.mls=Noble::tis_site_config$num.of.mls[site==Noble::tis_site_config$site.id]
 
     saat.test.data=Noble::pull.data(site = site, dp.id = "DP1.00002.001", bgn.month = bgn.month, end.month = end.month, time.agr = 30, package = "basic", save.dir = save.dir)
     taat.test.data=Noble::pull.data(site = site, dp.id = "DP1.00003.001", bgn.month = bgn.month, end.month = end.month, time.agr = 30, package = "basic", save.dir = save.dir)

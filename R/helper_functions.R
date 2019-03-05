@@ -15,7 +15,7 @@
     data.files=list.files(dir)[grepl(pattern = "\\.csv\\.gz", x = list.files(dir))]
     for(i in 1:length(data.files)){
         site=site.extract(data.files[i])
-        domn=Noble::tis_site_config$Domain[Noble::tis_site_config$SiteID==site]
+        domn=Noble::tis_site_config$domain[Noble::tis_site_config$site.id==site]
         if(!dir.exists(paste0(dir, domn, "-", site))){
             dir.create(paste0(dir, domn, "-", site))}
         file.copy(from = paste0(dir, data.files[i]), to = paste0(dir, domn, "-", site))
@@ -25,7 +25,7 @@
 
 #Route data and results to appropriate files
 .data.route=function(site, save.dir){
-    domn=Noble::tis_site_config$Domain[Noble::tis_site_config$SiteID==site]
+    domn=Noble::tis_site_config$domain[Noble::tis_site_config$site.id==site]
     data.route=paste0(save.dir, "/", domn, "-", site, "/")
     if(!dir.exists(data.route)){dir.create(data.route)}
     return(data.route)
@@ -290,7 +290,7 @@
     s<-1
     for (s in 1:length(sites.req)){
 
-        domn<-Noble::tis_site_config$Domain[Noble::tis_site_config$SiteID==sites.req[s]]
+        domn<-Noble::tis_site_config$domain[Noble::tis_site_config$site.id==sites.req[s]]
         dataFile<- paste0("NEON.", domn,".", sites.req[s],".", dp.id, "_REQ_", DateBgn, "_", DateEnd, "_", time.agr,"min_", package, ".csv.gz")
         fullPath <- paste0(save.dir, "/", dataFile)
         if (!file.exists(fullPath)){
@@ -376,7 +376,7 @@
     Date=NULL
     value=NULL
     variable=NULL
-    domn=Noble::tis_site_config$Domain[Noble::tis_site_config$SiteID==site]
+    domn=Noble::tis_site_config$domain[Noble::tis_site_config$site.id==site]
     data.dir=.data.route(site=site, save.dir = save.dir)
     data=Noble::pull.data(site=site,
                           dp.id = "DP1.00002.001",
@@ -422,7 +422,7 @@
     #math for percent of file that passes.
     pass=flow.flags[,grepl(x=colnames(flow.flags), pattern = "Pass")]
     sum.pass=sum(pass, na.rm=T)
-    total=(length(flow.flags)/(Noble::tis_site_config$Num.of.MLs[Noble::tis_site_config$SiteID==site]-1))*length(flow.flags[,1])
+    total=(length(flow.flags)/(Noble::tis_site_config$Num.of.MLs[Noble::tis_site_config$site.id==site]-1))*length(flow.flags[,1])
     pcnt.flow.pass=round(sum.pass/total, digits = 2)
     return(pcnt.flow.pass)
 
@@ -621,7 +621,7 @@
     }
 
     #Make domain-specific directory
-    domn=Noble::tis_site_config$Domain[which(Noble::tis_site_config$SiteID==site)]
+    domn=Noble::tis_site_config$domain[which(Noble::tis_site_config$site.id==site)]
     site.dir=paste0(save.dir, "/", domn, "-", site, "/")
 
     if(!dir.exists(site.dir)){

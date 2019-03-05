@@ -40,6 +40,7 @@ sites.req = "BLAN",
 save.dir = getwd(),
  data.field = "windDirMean")
 }
+
 }
 \author{
 Cove Sturdevant

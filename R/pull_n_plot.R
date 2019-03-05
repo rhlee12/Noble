@@ -30,6 +30,8 @@
 #' save.dir = getwd(),
 #'  data.field = "windDirMean")
 #' }
+#'
+#' @export
 
 
 # changelog and author contributions / copyrights
@@ -83,7 +85,7 @@ pull.n.plot <- function(sites.req, bgn.month, end.month, dp.id, save.dir, data.f
     s<-1
     for (s in 1:length(sites.req)){
 
-    domn<-Noble::tis_site_config$Domain[Noble::tis_site_config$SiteID==sites.req[s]]
+    domn<-Noble::tis_site_config$domain[Noble::tis_site_config$site.id==sites.req[s]]
         dataFile<- paste0("NEON.", domn,".", sites.req[s],".", dp.id, "_REQ_", DateBgn, "_", DateEnd, "_", time.agr,"min_", package, ".csv.gz")
         fullPath <- paste0(save.dir, "/", dataFile)
         if (!file.exists(fullPath)){
@@ -115,7 +117,7 @@ pull.n.plot <- function(sites.req, bgn.month, end.month, dp.id, save.dir, data.f
         dataIndex <- grep(paste0(data.field), colnames(commData), ignore.case = T)
         timeStmp <- as.POSIXct(strptime(commData[,1], format="%Y-%m-%d %H:%M:%S", tz="UTC"))
 
-        {grDevices::pdf(file=paste0(save.dir, "/", sites.req[s], "_", dp.id, "_", package, "_", data.field, ".pdf", sep=""), paper = "us")}
+        {grDevices::pdf(file=paste0(save.dir, "/", sites.req[s], "_", dp.id, "_", package, "_", data.field, ".pdf", sep=""), paper = "USr")}
 
         niceColors<- c("0"="#41f299", "1"="#f25841", "NA"="black")
 

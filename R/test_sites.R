@@ -20,6 +20,8 @@
 #' }
 #'
 #' @seealso \code{\link{neon.avail}}, which returns a data frame of data product availability by site and month.
+#'
+#' @export
 
 # changelog and author contributions / copyrights
 #   Robert Lee (2017-07-18)
