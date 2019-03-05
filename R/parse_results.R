@@ -11,7 +11,7 @@
 #' the Common folder of the specified directory. If TRUE, a summary_results.csv will be generated.
 #'
 #' @return The most recent test results from the 'results.csv' file in the
-
+#' @export
 #' @keywords process quality, data quality, gaps, commissioning
 # changelog and author contributions / copyrights
 #   Robert Lee (2018-01-15)
@@ -41,7 +41,7 @@ parse.results=function(test.dir, write.summary=T){
 
         for(v in 1:length(varList)){
             varOnly=siteOnly[which(siteOnly$variable_tested==varList[v]),]
-            varOut=varOnly[which.max(as.POSIXct(varOnly$time_performed)),]
+            varOut=varOnly[which.max(rownames(varOnly)),]
             parsed.results=rbind(parsed.results, varOut)
         }
     }
