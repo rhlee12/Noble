@@ -411,13 +411,13 @@
                       title=paste0(domn, "-", site))
 
     ggplot2::ggsave(filename = paste0(site, "_", bgn.month, "-", end.month, "_flow.png"),
-           path = paste0(save.dir, "/"),
-           plot = plot,
-           device = 'png',
-           width = 5,
-           height = 3.5,
-           units = "in",
-           dpi=300)
+                    path = paste0(save.dir, "/"),
+                    plot = plot,
+                    device = 'png',
+                    width = 5,
+                    height = 3.5,
+                    units = "in",
+                    dpi=300)
 
     #math for percent of file that passes.
     pass=flow.flags[,grepl(x=colnames(flow.flags), pattern = "Pass")]
@@ -754,6 +754,23 @@
     qm.count.percent=qm.count.percent[,-1]
     qm.count.percent=data.frame(Site=site, qm.count.percent)
     return(qm.count.percent)
+}
+
+.wind.validity=function(data.quant, data){
+    wind.qms=colnames(data)[grep(pattern = "QM", ignore.case = F, x = colnames(data))]
+    # wind.qms=unique(gsub(x = wind.qms, pattern = ".[0-9]{3}.[0-9]{3}", replacement = ""))
+    qm.exclude=c("windDirDistortedFlowFailQM", "Pass", "Alpha")
+    for(i in 1:length(qm.exclude)){
+        wind.qms=wind.qms[!grepl(pattern = qm.exclude[i], x = wind.qms, ignore.case = F)]
+    }
+    wind.qms=as.character(na.omit(wind.qms))
+
+    qf.subset=data[,wind.qms]
+    null.cols=which(colSums(is.na(qf.subset))==nrow(qf.subset))
+    qf.subset=qf.subset[,-null.cols]
+    passes=apply(X=qf.subset, MARGIN = 1, function(row) !any(row>20, na.rm = F))
+    out=round(length(which(passes))/nrow(data)*100, digits=2)
+    return(out)
 }
 
 #writes results files out

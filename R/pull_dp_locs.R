@@ -24,7 +24,7 @@
 #' \item\code{\link{neon.avail}}, which returns a data frame of data product availability by site and month.
 #' \item\code{\link{test.sites}}, which produces a list of sites that have a given data product installed.
 #' }
-#' @export
+#'
 
 # changelog and author contributions / copyrights
 #   Robert Lee (2018-04-26)
@@ -33,6 +33,7 @@
 ##############################################################################################
 
 pull.dp.locs=function(site, dp.id){
+    options(stringsAsFactors=F)
     month=format(zoo::as.yearmon(Sys.Date()-lubridate::weeks(8)), "%Y-%m")
     out=jsonlite::read_json(path=paste0("http://data.neonscience.org/api/v0/data/", dp.id, "/", site, "/", month))
     files=unlist(lapply(out$data$files, "[[", "name"))

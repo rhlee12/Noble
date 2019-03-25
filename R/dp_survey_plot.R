@@ -64,6 +64,7 @@ dp.survey.plot=function(dp.id, save.dir, site, pri.var){
 
     for(i in 1:length(dp.sites)){
         health.data=Noble::health.data(site = dp.sites[i], dp.id = dp.id)
+
         health.data$Month=as.Date(paste0(health.data$Month, "-01"))
 
         melt.health=reshape2::melt(data=health.data, id.vars="Month")

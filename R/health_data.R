@@ -45,7 +45,7 @@ if(missing(save.dir)){save.dir=tempdir()}
     var.name=gsub(pattern = "mean", replacement = "", x = pri.var, ignore.case = T)
 
     dp.avail = neon.avail(dp.id = dp.id)
-    dp.avail = cbind(Month=dp.avail[,1],  dp.avail[,which(colnames(dp.avail) %in% Noble::tis_site_config$SiteID)])
+    dp.avail = cbind(Month=dp.avail[,1],  dp.avail[,which(colnames(dp.avail) %in% Noble::tis_site_config$site.id)])
 
     temp.dates = zoo::as.Date(dp.avail$Month[
         which(
