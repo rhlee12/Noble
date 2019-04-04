@@ -54,7 +54,7 @@ fan.test<- function(site=site, bgn.month, end.month, save.dir, pass.th=95){
     #### Other Parameters ####
     package <- "expanded"
     Kpi <- "Air Temp"
-    domn= Noble::tis_site_config$Domain[Noble::tis_site_config$SiteID==site]
+    domn= Noble::tis_site_config$domain[Noble::tis_site_config$site.id==site]
 
     dat_dir=.data.route(site = site, save.dir = save.dir)
 
@@ -62,9 +62,7 @@ fan.test<- function(site=site, bgn.month, end.month, save.dir, pass.th=95){
     TAATnumber <- "DP1.00003.001"
 
     #get the number of measurement levels at the site
-    siteCfigIndx <- grep(siteCfig$SiteID, pattern=site)
-    mlSAAT <- unlist(siteCfig[siteCfigIndx,SAATnumber])
-    mlTAAT <- mlSAAT+1
+    siteCfigIndx <- grep(siteCfig$site.id, pattern=site)
 
     #### Expected files for the site and times specified ####
 
@@ -92,46 +90,38 @@ fan.test<- function(site=site, bgn.month, end.month, save.dir, pass.th=95){
 
     #### Scrape relevant Data ####
     SAATFlowIndx <- grep(pattern = "*flow", colnames(SAATData), ignore.case = T)
-    SAATHeatIndx <- grep("*heat", colnames(SAATData), ignore.case = T)
     SAATDataIndx <- grep("tempSinglemean", colnames(SAATData), ignore.case = T)
 
     TAATFlowIndx <- grep("*flow", colnames(TAATData), ignore.case = T)
-    TAATHeatIndx <- grep("*heat", colnames(TAATData), ignore.case = T)
     TAATDataIndx <- grep("temptriplemean", colnames(TAATData), ignore.case = T)
 
     #### Store the scraped data ####
-    fanAspData <- as.data.frame(SAATData[,1])
+    fanAspData <- data.frame(startDateTime=SAATData[,1],
+                             SAATData[,SAATDataIndx], SAATData[,SAATFlowIndx],
+                             TAATData[,TAATDataIndx], TAATData[,TAATFlowIndx])
 
-    fanAspData <-cbind(fanAspData, SAATData[SAATDataIndx])
-    fanAspData <-cbind(fanAspData, SAATData[SAATHeatIndx])
-    fanAspData <-cbind(fanAspData, SAATData[SAATFlowIndx])
+        mls=paste0("000.0", seq(siteCfig$num.of.mls[siteCfigIndx]), "0")
 
-    fanAspData <-cbind(fanAspData, TAATData[TAATDataIndx])
-    fanAspData <-cbind(fanAspData, TAATData[TAATHeatIndx])
-    fanAspData <-cbind(fanAspData, TAATData[TAATFlowIndx])
-
-    #### Re-index new data frame for correct variables ####
-    allDataIndx <- grep(pattern = "*mean", colnames(fanAspData), ignore.case = T)
-    heatIndx <- grep(pattern = "*heaterPass", colnames(fanAspData), ignore.case = T)
-    flowIndx <- grep(pattern = "*flowPass", colnames(fanAspData), ignore.case = T)
-
-    flowPass<-colSums(fanAspData[flowIndx], na.rm = T)
-    nObs <- 0
-
-    for(i in 1:length(flowIndx)){
-        temp<-stats::na.omit(fanAspData[flowIndx[i]])
-        nObs<-(nObs+length(temp[,1]))
+    num.obs=0
+    num.pass=0
+    for(ml in seq_along(mls)){
+        #print(mls[ml])
+        ml.only=fanAspData[,grep(pattern = mls[ml], x = colnames(fanAspData))]
+        data.indx=grep(pattern = "Mean", x = colnames(ml.only))
+        flow.pass.indx=grep(pattern = "flowPass", x = colnames(ml.only))
+        num.obs=num.obs+length(which(!is.na(ml.only[,data.indx])))
+        num.pass=num.pass+length(which(ml.only[!is.na(ml.only[,data.indx]),flow.pass.indx]>80))
     }
-    #pcntFlowPass <- round(sum(flowPass)/(length(fanAspData$`SAATData$POSIXseq`)*mlTAAT), digits = 2)
-    # ommmit gapped data, only test the percent passing where data exists:
-    pcntFlowPass <- round(sum(flowPass)/(nObs), digits = 2)
+
+
+    pcntFlowPass <- round((num.pass*100)/(num.obs), digits = 2)
     print(pcntFlowPass)
 
     dataRpt = data.frame(site=site,
                time_performed=as.character(Sys.time()),
                begin_month=bgn.month,
                end_month=end.month,
-               days_tested=days,
+               days_tested=round(days, digits=2),
                percent_pass=pcntFlowPass,
                pass_threshold=pass.th,
                user_remark=""

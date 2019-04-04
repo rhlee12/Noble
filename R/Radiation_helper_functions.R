@@ -1,60 +1,6 @@
-#Define two time periods for variance testing
-.var.periods=function(bgn.month, end.month){
-    if(bgn.month==end.month){
-        test.days=lubridate::days_in_month(zoo::as.yearmon(bgn.month))
-        half=as.numeric(unlist(strsplit(x=as.character(test.days/2), split = "\\."))[1])
-    }else{
-        test.days=abs(difftime(time1 = as.Date(paste0(bgn.month, "-01")), time2 = as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1)), units = "days"))
-        half=as.numeric(unlist(strsplit(x=as.character(test.days/2), split = "\\."))[1])
-    }
-    out=list(
-        frst.per=c(as.Date(paste0(bgn.month, "-01")), as.Date(paste0(bgn.month, "-01"))+half),
-        last.per=c(as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1))-half, as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1)))
-    )
-    return(out)
-}
 
 
-.rad.var.test=function(single.var.data, bgn.month, end.month, raw.dir, site, plot=FALSE){
 
-    periods=.var.periods(bgn.month = bgn.month, end.month = end.month)
-    frst.per=periods$frst.per
-    last.per=periods$last.per
-    #Put into massive data frame
-    # if(class(raw.var.data)=="list"){
-    # var.data=do.call(cbind, raw.var.data)}else{var.data=raw.var.data}
-
-    #var.data=data.frame(startDateTime=var.data[,1], var.data[,grepl(pattern = "variance", x = colnames(var.data), ignore.case = T)])
-    #var.data=var.data[,-which(grepl(pattern = "*LW*", x = colnames(var.data)))]
-
-    # Convert to local time
-    time.zone=Noble::tis_site_config$time.zone[Noble::tis_site_config$site.id==site]
-    #browser()
-    var.data=single.var.data
-
-    var.data$startDateTime=as.POSIXct(var.data$startDateTime, tz="UTC")
-    var.data$startDateTime=as.POSIXct(format(var.data$startDateTime, tz=time.zone, usetz = T), tz=time.zone, usetz = T)
-
-    test.time = c("00:00:00", "00:30:00", "01:00:00", "01:30:00", "02:00:00", "02:30:00", "03:00:00",
-                  "03:30:00", "04:00:00")
-
-    night.vars=var.data[which(strftime(var.data$startDateTime, format="%H:%M:%S", tz=time.zone) %in% test.time),]
-
-    y=night.vars[,2]
-    x=seq_along(night.vars$startDateTime)
-
-    if(all(!is.na(y))){
-        out=stats::lm(y~x)
-        slope=out$coefficients[2]
-        plot(night.vars)
-    }else{
-        slope=NA
-        }
-
-
-    out=c(stream=colnames(night.vars)[2], slope=slope)
-
-    return(out)
     #
     # #subset to first and last weeks
     # first.pop=var.data[frst.per[2]>var.data$startDateTime&var.data$startDateTime>=frst.per[1],]
@@ -119,4 +65,4 @@
     # }
 
     #return(f.test.result)
-}
+

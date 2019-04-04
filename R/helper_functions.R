@@ -1,5 +1,43 @@
 #Helper Functions
+##############################################################################################
+.air.var.plotting=function(test.data, save.dir){
+    test.time = c("00:00:00", "00:30:00", "01:00:00", "01:30:00", "02:00:00", "02:30:00", "03:00:00",
+                  "03:30:00", "04:00:00")
 
+    night.data=test.data[which(strftime(test.data$startDateTime, format="%H:%M:%S", tz=site.tz) %in% test.time),]
+    night.data=data.frame(startDateTime=night.data$startDateTime, night.data[,grepl(pattern = "Variance", x = colnames(night.data))])
+    m.night=reshape2::melt(night.data, id.vars="startDateTime")
+    m.night$startDateTime=as.POSIXct(m.night$startDateTime, tz = site.tz)
+    m.night$testPeriod=0
+    m.night$testPeriod[frst.week[2]>m.night$startDateTime&m.night$startDateTime>=frst.week[1]]=1
+    m.night$testPeriod[last.week[2]>m.night$startDateTime&m.night$startDateTime>=last.week[1]]=1
+
+    var.plot=ggplot2::ggplot(data=m.night, ggplot2::aes(x=startDateTime, y=value, color=as.factor(variable)))+
+        ggplot2::geom_rect(
+            ggplot2::aes(xmin=as.POSIXct(frst.week[1], tz=site.tz),
+                         xmax = as.POSIXct(frst.week[2], tz=site.tz),
+                         ymin = -Inf,
+                         ymax = Inf),
+            fill = 'gray',
+            alpha = 0.01)+
+        ggplot2::geom_rect(
+            ggplot2::aes(xmin=as.POSIXct(last.week[2], tz=site.tz),
+                         xmax = as.POSIXct(last.week[1], tz=site.tz),
+                         ymin = -Inf,
+                         ymax = Inf),
+            fill = 'gray',
+            alpha = 0.01)+
+        ggplot2::geom_point()+
+        ggplot2::theme_light()+
+        ggplot2::ggtitle(paste0(site, " overnight variance values for radiation data products"), subtitle = "Gray boxes indicate test periods")+
+        ggplot2::xlab("Date")+
+        ggplot2::geom_smooth()
+
+    ggplot2::ggsave(plot = var.plot, device = "png", width = 8, height = 5, filename = paste0(site, "_night_vars.png"), path = .data.route(site = site, save.dir = save.dir), units = "in")
+
+}
+
+##############################################################################################
 # Puts free-range data into a tidy file structure by site.
 .data.org=function(dir){
 
@@ -38,6 +76,7 @@
     return(result.route)
 }
 
+##############################################################################################
 #generate call.df####
 .gen.call.df=function(bgn.month, end.month, site=site, dp.id=dp.id, time.agr=time.agr, package=package){
 
@@ -59,8 +98,6 @@
 
     site_options=data.frame(avail_months=unlist(site_meta$dataProducts[[prod_indx]]$availableMonths), urls= unlist(site_meta$dataProducts[[prod_indx]]$availableDataUrls))
 
-    #####
-
     # Stop if no data
     if(length(site_options$avail_months)==0){stop(paste0(dp.id, " is missing at ", site))}
 
@@ -70,10 +107,12 @@
     url_index<-lapply(date_range, function(x) grep(pattern=x, all_data_urls))
     temp_data_urls<-all_data_urls[unlist(url_index)]
 
-    if(length(temp_data_urls)==0){stop("Data were missing in specified date range at ", site, ". Check ", dp.id, " avalability with neon.avail")}
+    if(length(temp_data_urls)==0){
+        stop("Data were missing in specified date range at ", site, ". Check ", dp.id, " avalability with neon.avail")
+        }
 
     #For found DPs, given the Kpi, pull hosted metadata via API
-    #print(temp_data_urls)
+
     api_data<-lapply(as.list(temp_data_urls), function(x) as.list(rjson::fromJSON(file = as.character(x), unexpected.escape = "skip")))
 
     # build a list of URLs served by the API
@@ -119,10 +158,9 @@
     call.df=call.df[which(!grepl(x=call.df$url_list, pattern="variables")),] #weed out varaible tables
 
     return(call.df)
-
 }
 
-
+##############################################################################################
 # Private function for calculating the percent of wind measurements falling due to wind coming
 # through the buffers on either side of the distorted flow field
 .percent.buffer=function(site, bgn.month, end.month, save.dir){
@@ -167,10 +205,9 @@
     return(pcnt.in.buffer)
 }
 
-
+##############################################################################################
 # Private function for calculating the percent of wind measurements falling due to wind coming
 # through the buffers on either side of the distorted flow field
-###
 .percent.distorted=function(site, bgn.month, end.month, save.dir){
 
     if(missing(save.dir)){save.dir=tempdir()}
@@ -214,44 +251,7 @@
 
 
 ############################################################################################
-# title  Returns PDF(s) of data for the specified site and data product
-
-# author Robert Lee \email{rlee@battelleecology.org}\cr
-# author Cove Sturdevant
-
-# description For a specified data product ID, a data frame of the availabilty of that product
-# for all NEON instrumented sites is returned. The output of data product availability is best
-# interpreted with the base \code{View()} function.
-#
-# param \code{sites.req} The site, or character list of sites to return plots of.
-# param \code{bgn.month} The start month to plot data for.
-# param \code{end.month} The end month to plot data for.
-# param \code{dp.id} Parameter of class character. The NEON data product code of the data product of interest.
-# param \code{save.dir} The directory for data files and output PDFs to be saved to.
-# param \code{data.field} Optional. The name of the measurement vaiable to plot. Defaults to the 'core' measurement for most products.
-
-# return Outputs a a PDF of plots data on of all measurement levesl, with one PDF per site.
-
-# keywords process quality, data quality, gaps, commissioning
-
-# examples
-# # for a variable, "test.dir", holding a valid file path:
-# .pull.n.plot.png(bgn.month = "2017-04", end.month = "2017-05", dp.id = "DP1.00001.001", sites.req = "BLAN", save.dir = getwd(), data.field = "windDirMean")
-
-# seealso Currently none
-
-# changelog and author contributions / copyrights
-#   Robert Lee (2016-11-07)
-#     original creation from Cove's code
-#
-#   Robert Lee (2017-07-17)
-#     Updating function for Noble integration
-#
-#   Robert Lee (2017-12-27)
-#     Branching off a new function to produce PNGs only
-#
-##############################################################################################
-
+# Returns PNGs of data for the specified site and data product
 .pull.n.plot.png <- function(sites.req, bgn.month, end.month, dp.id, save.dir, data.field, package){
 
     qfFail=NULL
@@ -364,15 +364,11 @@
     }
 }
 
-# bgn.month="2017-06"
-# end.month="2017-08"
-# site="GRSM"
+##############################################################################################
+# Saves a plot of flow metrics, and returns the percent of records with good flow
+# (percent of flow metrics where flowPassQM=100)
 
-
-#saves a plot of flow metrics, and returns the percent of records with good flow (percent of flow metrics where flowPassQM=100)
-
-.flow.effect=function(site, bgn.month, end.month, save.dir)
-{
+.flow.effect=function(site, bgn.month, end.month, save.dir){
     Date=NULL
     value=NULL
     variable=NULL
@@ -429,35 +425,7 @@
 }
 
 ############################################################################################
-# title  Create wind roses for NEON instrumented sites
-
-# author Robert Lee \email{rlee@battelleecology.org}\cr
-
-# description For a spceified site and time range, produce a wind rose plot. If the "ml" (measurement level)
-# parameter is specified, a ggplot2 object for that measurement level is produced. Otherwise, a ggplot2 object of a
-# faceted plot of all available measurement levels is returned.
-#
-# param \code{site} NEON site to produce the wind rose plot.
-# param \code{bgn.month} The start month for wind data to plot.
-# param \code{end.month} The end month for wind data to plot.
-# param \code{ml} Optional. Used to specifiy what measurement level should be plotted.
-# param \code{speed.bins} Optional. The number of bins for wind speed to be plotted in.
-# param \code{dir.bins} Optional. The number of bins for wind directions to be plotted in.
-#
-# return Outputs a ggplot2 object of the generated wind roses
-
-# keywords process quality, data quality, gaps, commissioning
-
-# examples
-# CPER<-plot.wind.rose(site="CPER", bgn.month="2017-01", end.month="2017-02", ml=2, speed.bins=10, dir.bins=36)
-
-# seealso Currently none
-
-# changelog and author contributions / copyrights
-#   Robert Lee (2017-07-10)
-#     original creation
-#
-##############################################################################################
+# Create wind roses for NEON instrumented sites binned by quality flag
 
 .plot.qf.wind.rose = function(site, bgn.month, end.month, ml, speed.bins, dir.bins){
 
@@ -560,48 +528,7 @@
 }
 
 ############################################################################################
-# title: Downloads and performs process quality checks on NEON data, given specifc dates
-
-# author: Robert Lee \email{rlee@battelleecology.org}\cr
-
-# description: For the specified dates, site, variables, and data product or name of family of data products,
-# data are downloaded and saved to the specifed directory. Process quality calculations are then performed and written to a results file in save.dir.
-#
-# param \code{site} Parameter of class character. The NEON site data should be downloaded for.
-# param \code{dp.id} Parameter of class character. The name of the data product to pull data, or a
-# keyword for a family of data products, e.g. "wind" will pull for 2D and 3D wind data products.
-# param \code{prin.vars} The principle variables to test (variable names, such as 'windSpeed'). Omit the term 'Mean'.
-# param \code{bgn.date} Parameter of class character. The year-month-day (e.g. "2017-01-01") value for the start of the period of interest.
-# param \code{end.date} Parameter of class character. The year-month-day (e.g. "2017-01-01") value for the end of the period of interest.
-# param \code{time.agr} Parameter of class numeric. The data agregation interval requested, must be 1, 2, 5, or 30.
-# param \code{package} Parameter of class character. Optional. The type of data package to be returned If not specified, defaults to basic.
-# param \code{save.dir} Parameter of class character. The local directory where data files should be saved.
-# param \code{q.th} Parameter of class character. Optional. Alows the user to directly set the Quality threshold (nominal percent.)
-# param \code{v.th} Parameter of class character. Optional. Alows the user to directly set the Validity threshold (nominal percent.)
-# return Writes data files to the specified directory.
-
-# keywords: process quality, data quality, gaps, commissioning
-
-# examples:
-# site = "CPER"
-# dp.id = "DP1.00001.001"
-# prin.vars<-c("windSpeed", "windDir")
-# bgn.month = "2017-05"
-# end.month = "2017-06"
-# time.agr = 30
-# package="basic"
-# save.dir<-"/Users/rlee/Dropbox/GitHub/Commissioning-TIS-rhlee12/Tis2DWindPQ_test"
-# Noble::tis.pq.test(site = site, dp.id = dp.id, bgn.month = bgn.month, end.month = end.month,
-# time.agr = time.agr, package=package, save.dir=save.dir, prin.vars=prin.vars)
-
-# seealso: Currently none
-
-# changelog and author contributions / copyrights
-#   Robert Lee (2017-07-20)
-#     original creation
-#
-##############################################################################################
-
+# Downloads and performs process quality checks on NEON data, given specifc dates
 
 .tis.pq.test<-function(site = "CPER", dp.id = "DP1.00001.001", prin.vars,  bgn.date = "2017-05-15", end.date = "2017-06-15", time.agr = 30, package="basic", save.dir, q.th=95, v.th=90){
 
@@ -721,7 +648,7 @@
     }
 }
 
-
+##############################################################################################
 #Average individual tower-based measurements accross all MLs
 .un.ml.ize=function(data, keep.na){
     if(missing(keep.na)){keep.na=T}
@@ -736,6 +663,70 @@
     return(data.out)
 }
 
+##############################################################################################
+# Variance drift testing
+.var.drift.test=function(single.var.data, raw.dir, site, plot=FALSE){
+
+    # periods=.var.periods(bgn.month = bgn.month, end.month = end.month)
+    # frst.per=periods$frst.per
+    # last.per=periods$last.per
+    #Put into massive data frame
+    # if(class(raw.var.data)=="list"){
+    # var.data=do.call(cbind, raw.var.data)}else{var.data=raw.var.data}
+
+    #var.data=data.frame(startDateTime=var.data[,1], var.data[,grepl(pattern = "variance", x = colnames(var.data), ignore.case = T)])
+    #var.data=var.data[,-which(grepl(pattern = "*LW*", x = colnames(var.data)))]
+
+    # Convert to local time
+    time.zone=Noble::tis_site_config$time.zone[Noble::tis_site_config$site.id==site]
+    #browser()
+    var.data=single.var.data
+
+    var.data$startDateTime=as.POSIXct(var.data$startDateTime, tz="UTC")
+    var.data$startDateTime=as.POSIXct(format(var.data$startDateTime, tz=time.zone, usetz = T), tz=time.zone, usetz = T)
+
+    test.time = c("00:00:00", "00:30:00", "01:00:00", "01:30:00", "02:00:00", "02:30:00", "03:00:00",
+                  "03:30:00", "04:00:00")
+
+    night.vars=var.data[which(strftime(var.data$startDateTime, format="%H:%M:%S", tz=time.zone) %in% test.time),]
+
+    y=night.vars[,2]
+    x=seq_along(night.vars$startDateTime)
+
+    if(!all(is.na(y))){
+        out=stats::lm(y~x)
+        slope=out$coefficients[2]
+        plot(night.vars)
+    }else{
+        slope=NA
+    }
+
+
+    out=c(stream=colnames(night.vars)[2], slope=slope)
+
+    return(out)
+
+}
+
+##############################################################################################
+#Define two time periods for variance testing - Used with old Levene test of ratio of variances
+.var.periods=function(bgn.month, end.month){
+    if(bgn.month==end.month){
+        test.days=lubridate::days_in_month(zoo::as.yearmon(bgn.month))
+        half=as.numeric(unlist(strsplit(x=as.character(test.days/2), split = "\\."))[1])
+    }else{
+        test.days=abs(difftime(time1 = as.Date(paste0(bgn.month, "-01")), time2 = as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1)), units = "days"))
+        half=as.numeric(unlist(strsplit(x=as.character(test.days/2), split = "\\."))[1])
+    }
+    out=list(
+        frst.per=c(as.Date(paste0(bgn.month, "-01")), as.Date(paste0(bgn.month, "-01"))+half),
+        last.per=c(as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1))-half, as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1)))
+    )
+    return(out)
+}
+
+##############################################################################################
+# Summarize the QMs contributing to flagging of 2D wind DIRECTION data
 .wind.qm.summary=function(site, bgn.month, end.month, save.dir){
     if(missing(save.dir)){save.dir=tempdir()}
     data<-Noble::pull.data(site = site,
@@ -756,6 +747,8 @@
     return(qm.count.percent)
 }
 
+##############################################################################################
+# 2D wind validity (for PQ testing) that ommits Dist. Flow
 .wind.validity=function(data.quant, data){
     wind.qms=colnames(data)[grep(pattern = "QM", ignore.case = F, x = colnames(data))]
     # wind.qms=unique(gsub(x = wind.qms, pattern = ".[0-9]{3}.[0-9]{3}", replacement = ""))
@@ -773,6 +766,7 @@
     return(out)
 }
 
+##############################################################################################
 #writes results files out
 .write.results=function(result, save.dir){
     if(file.exists(.result.route(save.dir))){
@@ -785,6 +779,38 @@
     }
 }
 
+#### OLD CODE PRESERVED IN CASE ####
+#~~~~~~~~~~~~~~~~~~ VARAIANCE TESTING FOR AAT ####
+# #Make a sequence of dates and times for the requested period
+# bgn_temp = base::as.Date(base::paste0(bgn.month, "-01"), tz="UTC")
+# end_temp = base::as.Date(base::paste0(end.month, "-01"), tz="UTC")
+# bgn_temp = base::as.POSIXct(base::paste0(bgn.month, "-01"), tz="UTC")
+# end_temp = base::as.POSIXlt(base::paste0(end_temp, "-01"), tz="UTC")
+# end_temp$mon=end_temp$mon+1
+# #end_temp=end_temp-lubridate::minutes(30)-lubridate::seconds(1)
+#
+# frst.week=c(as.Date(paste0(bgn.month, "-01")), as.Date(paste0(bgn.month, "-01"))+7)
+# last.week=c(as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1))-7, as.Date(Noble::last.day.time(end.month = end.month, time.agr = 1)))
+#
+#
+# group.one=Noble::date.extract(data = test.data, bgn.date = bgn_temp, end.date =bgn_temp+lubridate::days(15))
+# group.one=base::data.frame(startDateTime=group.one$startDateTime, group.one[,grepl(pattern = "tempSingleVariance", x = colnames(group.one))|grepl(pattern = "tempTripleVariance", x = colnames(group.one))])
+# group.one=group.one[lubridate::hour(group.one$startDateTime) %in% c(0:5),]
+# group.two=Noble::date.extract(data = test.data, bgn.date = end_temp-lubridate::days(15), end.date = end_temp-lubridate::minutes(30)-lubridate::seconds(1))
+# group.two=base::data.frame(startDateTime=group.two$startDateTime, group.two[,grepl(pattern = "tempSingleVariance", x = colnames(group.two))|grepl(pattern = "tempTripleVariance", x = colnames(group.two))])
+# group.two=group.two[lubridate::hour(group.two$startDateTime) %in% c(0:5),]
+#
+# f.test=c()
+# for(i in 2:length(colnames(group.one))){
+#     f.test=append(f.test, try(stats::var.test(x=as.numeric(group.one[,i]), y = as.numeric(group.two[,i]), ratio = 1)$p.value, silent = T))
+# }
+# f.test[unlist(lapply(f.test, function(f) grepl(pattern = "not enough", x = f)))]=NA
+# #if(class(f.test)=="try-error"){f.test=NA}
+# f.test=as.numeric(f.test)
+# mean=mean(stats::na.omit(f.test), na.rm = T)
+# f.test=append(f.test, c("mean"=mean))
+# variance=data.frame(ML=c(seq(Noble::tis_site_config$num.of.mls[Noble::tis_site_config$site.id==site]), "Mean"), P_value=f.test)
+#EOF####
 
 
 

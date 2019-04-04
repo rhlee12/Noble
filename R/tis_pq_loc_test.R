@@ -31,7 +31,6 @@
 #
 ##############################################################################################
 
-
 tis.pq.loc.test<-function(site, dp.id,
                           prin.vars,  bgn.month,
                           end.month, save.dir,
@@ -65,6 +64,9 @@ tis.pq.loc.test<-function(site, dp.id,
     test.data=try(Noble::pull.data(site = site, dp.id = dp.id, bgn.month = bgn.month, end.month = end.month, time.agr = time.agr, package=package, save.dir = site.dir))
     if(length(test.data)>1){
         sensor.locs=as.character(na.exclude(unique(stringr::str_extract(colnames(test.data), pattern = "[0-9]{3}.[0-9]{3}"))))
+        if(any(grepl(pattern = "inSW", x = prin.vars))){
+            sensor.locs=sensor.locs[-grep(pattern = "003.000", x = sensor.locs, ignore.case = T)]
+        }
         for(sl in 1:length(sensor.locs)){
             sensor.data=test.data[,c(1, 2, grep(pattern = sensor.locs[sl], x = colnames(test.data)))]
             for(i in 1:length(prin.vars)){
@@ -73,10 +75,10 @@ tis.pq.loc.test<-function(site, dp.id,
                 qf.indx<-grep(x=colnames(sensor.data), pattern=paste0("^", prin.vars[i], "FinalQF*"))
                 qf.indx<-append(qf.indx, grep(x=colnames(sensor.data), pattern="^finalQF*"))
 
-                if(prin.vars[i]=="inSW"){
-                    data.indx=data.indx[-which(grepl(x=colnames(sensor.data[,data.indx]), pattern = "003.000"))]
-                    qf.indx=qf.indx[-which(grepl(x=colnames(sensor.data[,qf.indx]), pattern = "003.000"))]
-                }
+                # if(prin.vars[i]=="inSW"){
+                #     data.indx=data.indx[-which(grepl(x=colnames(sensor.data[,data.indx]), pattern = ))]
+                #     qf.indx=qf.indx[-which(grepl(x=colnames(sensor.data[,qf.indx]), pattern = "003.000"))]
+                # }
                 #special case for precip
                 if(prin.vars[i]=="priPrecipBulk"){
                     data.indx<-grep(x=colnames(sensor.data), pattern=paste0("^", prin.vars[i]))
@@ -114,6 +116,7 @@ tis.pq.loc.test<-function(site, dp.id,
                     quant_threshold=94.6
                     valid_threshold=89.87
                 }
+
                 pass.fail=if(data.quant>=quant_threshold&data.valid>=valid_threshold){"PASS"}else{"FAIL"}
                 ##### WRITE RESULTS
                 dq.rslt<-data.frame(site=site,
@@ -132,7 +135,7 @@ tis.pq.loc.test<-function(site, dp.id,
                 )
 
                 if(file.exists(.result.route(save.dir))){
-                    dq.rpt <- data.frame(utils::read.csv(file = .result.route(save.dir), header = T, stringsAsFactors = T))
+                    dq.rpt <- data.frame(utils::read.csv(file = .result.route(save.dir), header = T, stringsAsFactors = F))
                     dq.rpt <- rbind(dq.rpt, dq.rslt)
                     utils::write.csv(x = dq.rpt, file = .result.route(save.dir), row.names = F)
                 }
