@@ -32,69 +32,88 @@
 #
 ##############################################################################################
 
-co2.pq.test=function(site = site,  bgn.month, end.month, save.dir, q.th=95, v.th=88.1){
+co2.pq.test=function(site = site,  bgn.month, end.month, save.dir, q.th=90, v.th=80, overwrite=FALSE){
     time.agr = 30
-    files=Noble::pull.eddy.data(site, bgn.month, end.month, package="basic", save.dir)
+
+    files=Noble::pull.eddy.data(site, bgn.month, end.month, package="expanded", save.dir)
     file.dir=.data.route(site = site, save.dir = save.dir)
-    co2.raw=lapply(files, function(x) Noble::hdf5.to.df(site, hdf5.file=paste0(file.dir,x), meas.name="co2Turb", time.agr, save.dir))
-    co2.df=do.call(rbind, co2.raw)
-    co2.df$timeBgn=gsub(x = co2.df$timeBgn, pattern = "T", replacement = " ")
-    co2.df$timeBgn=gsub(x = co2.df$timeBgn, pattern = "z", replacement = "")
 
-    co2.df$timeBgn=as.POSIXct(co2.df$timeBgn, tz="UTC")
-    co2.df$timeBgn=format(co2.df$timeBgn, tz="UTC")
+    ### QF RESULTS (CORRECTED DATA ONLY)
+    # FLATTEN HDF5
+    co2.qm=Noble::hdf5.to.df(site=site,
+                             files = files,
+                             data.type = "qfqm",
+                             var.name = "rtioMoleDryCo2",
+                             meas.name="co2Turb",
+                             bgn.month = bgn.month,
+                             end.month = end.month,
+                             time.agr = time.agr,
+                             save.dir = file.dir,
+                             overwrite = overwrite)
+    # GENERATE STATISTIC
+    co2.valid=round(sum(co2.qm$qfFinl==0, na.rm = TRUE)/nrow(co2.qm)*100, digits=2)
 
-    ref.times=data.frame(timeBgn=Noble::help.time.seq(from = as.Date(paste0(bgn.month, "-01")), to=Noble::last.day.time(end.month = end.month, time.agr = time.agr), time.agr = time.agr))
-    ref.times$timeBgn=format(as.POSIXct(ref.times$timeBgn, tz = "UTC"), tz="UTC")
+    ### CORRECTED RESULTS
+    # FLATTEN HDF5
+    co2.cor=Noble::hdf5.to.df(site=site,
+                              files = files,
+                              data.type = "data",
+                              var.name = "rtioMoleDryCo2Cor",
+                              meas.name="co2Turb",
+                              bgn.month = bgn.month,
+                              end.month = end.month,
+                              time.agr = time.agr,
+                              save.dir = file.dir,
+                              overwrite = overwrite)
+    # GENERATE STATISTIC
+    cor.uptime=round(sum(!is.na(co2.cor$mean))/nrow(co2.cor)*100, digits=2)
 
-    test.data=merge(x=ref.times, y=co2.df, by="timeBgn", all.x = T)
+    ### RAW (UNCORRECTED) RESULTS
+    # FLATTEN HDF5
+    co2.raw=Noble::hdf5.to.df(site=site,
+                              files = files,
+                              data.type = "data",
+                              var.name = "rtioMoleDryCo2Raw",
+                              meas.name="co2Turb",
+                              bgn.month = bgn.month,
+                              end.month = end.month,
+                              time.agr = time.agr,
+                              save.dir = file.dir,
+                              overwrite = overwrite)
+    # GENERATE STATISTIC
+    raw.uptime=round(sum(!is.na(co2.raw$mean))/nrow(co2.raw)*100, digits=2)
+    print(paste(site, nrow(co2.raw)))
 
-    if(length(test.data)>1){
-        data.indx<-grep(x=colnames(test.data), pattern="mean.densMoleCo2")
+    ### TOTAL TIME TESTED
+    bgn.day=as.Date(paste0(bgn.month, "-01"))
+    end.day=as.POSIXct(Noble::last.day.time(end.month = end.month, time.agr = 1440))
+    days=round(difftime(end.day, bgn.day, units="days"), digits = 2)
 
-        qf.indx<-grep(x=colnames(test.data), pattern="qfFinl.densMoleCo2")
-        #qf.indx<-append(qf.indx, grep(x=colnames(test.data), pattern="^finalQF*"))
+    ### WRITE RESULTS
+    # Make results DF
+    dq.rslt<-data.frame(site=rep(site, 2),
+                        time_performed=rep(as.character(Sys.time()),2),
+                        begin_month=rep(bgn.month, 2),
+                        end_month=rep(end.month,2),
+                        days_tested=rep(days,2),
+                        data_product="DP4.00200.001",
+                        variable_tested=c("rtioMoleDryCo2Raw", "rtioMoleDryCo2Cor"),
+                        data_quantity=c(raw.uptime, cor.uptime),
+                        data_validity=c(co2.valid, "NA"),
+                        quant_threshold= rep(q.th,2),
+                        valid_threshold=rep(v.th,2)
+    )
 
-        bgn.day=as.Date(paste0(bgn.month, "-01"))
-        end.day=as.POSIXct(Noble::last.day.time(end.month = end.month, time.agr = 1440))
-
-        days=round(difftime(end.day, bgn.day, units="days"), digits = 2)
-        end.day=lubridate::round_date(end.day, "day")
-
-        all.data=length(data.indx)*length(test.data[,1])
-
-        num.nas<-sum(is.na(test.data[,data.indx]))
-        num.data<-sum(!is.na(test.data[,data.indx]))
-
-        data.quant<-round(100*(num.data/(all.data)), digits = 2)
-
-        num.qf.fail<-sum(test.data[,qf.indx]==1, na.rm=TRUE)
-        num.qf.pass<-sum(test.data[,qf.indx]==0, na.rm = TRUE)
-        num.qf.na<-sum(is.na(test.data[,qf.indx]))
-
-        data.valid<-round(100*(num.qf.pass/(all.data)), digits = 2)
-
-        ##### WRITE RESULTS
-        dq.rslt<-data.frame(site=site,
-                            time_performed=as.character(Sys.time()),
-                            begin_month=bgn.month,
-                            end_month=end.month,
-                            days_tested=days,
-                            data_product="DP4.00200.001",
-                            variable_tested="densMoleCo2",
-                            data_quantity=data.quant,
-                            data_validity=data.valid,
-                            quant_threshold= q.th,
-                            valid_threshold=v.th
-        )
-
-        if(file.exists(.result.route(save.dir))){
-            dq.rpt <- data.frame(utils::read.csv(file = .result.route(save.dir), header = T, stringsAsFactors = T))
-            dq.rpt <- rbind(dq.rpt, dq.rslt)
-            utils::write.csv(x = dq.rpt, file = .result.route(save.dir), row.names = F)
-        }else{
-            utils::write.csv(x = dq.rslt, file = .result.route(save.dir), col.names = T, row.names = F)
-        }
+    # Append or creat results file as needed
+    if(file.exists(.result.route(save.dir))){
+        dq.rpt <- data.frame(utils::read.csv(file = .result.route(save.dir), header = T, stringsAsFactors = T))
+        dq.rpt <- rbind(dq.rpt, dq.rslt)
+        utils::write.csv(x = dq.rpt, file = .result.route(save.dir), row.names = F)
+    }else{
+        utils::write.csv(x = dq.rslt, file = .result.route(save.dir), col.names = T, row.names = F)
     }
+    rhdf5::h5closeAll()
 }
+
+
 

@@ -4,8 +4,8 @@
 \alias{soni.pq.test}
 \title{Perform A Commissioning PQ Test on 3D Sonic Anemometer Data}
 \usage{
-soni.pq.test(site = "CPER", bgn.month, end.month, save.dir, q.th = 95,
-  v.th = 90)
+soni.pq.test(site, bgn.month, end.month, save.dir, q.th = 95,
+  v.th = 90, overwrite = FALSE)
 }
 \arguments{
 \item{site}{Parameter of class character. The NEON site data should be downloaded for.}
@@ -31,13 +31,14 @@ products, data are downloaded and saved to the specifed directory. Process quali
 \examples{
 \dontrun{
 site = "CPER"
-bgn.month = "2017-05"
-end.month = "2017-06"
+bgn.month = "2017-09"
+end.month = "2017-10"
 time.agr = 30
 package="basic"
 save.dir<-tempdir()
 Noble::tis.pq.test(site = site, bgn.month = bgn.month, end.month = end.month, save.dir=save.dir)
 }
+
 }
 \author{
 Robert Lee \email{rlee@battelleecology.org}\cr

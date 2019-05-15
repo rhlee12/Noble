@@ -58,7 +58,7 @@ parse.results=function(test.dir, write.summary=T, target_bgn, target_end){
         }
 
         ref.params=unique(siteOnly[,colnames(siteOnly) %in% key.cols])
-        ref.params=na.omit(ref.params)
+        ref.params=data.frame(na.omit(ref.params))
 
 
         for(r in 1:nrow(ref.params)){

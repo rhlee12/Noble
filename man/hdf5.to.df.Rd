@@ -4,12 +4,11 @@
 \alias{hdf5.to.df}
 \title{Convert NEON Eddy Covaraince Data From hdf5 to Data Frames}
 \usage{
-hdf5.to.df(site, hdf5.file, meas.name, time.agr, save.dir)
+hdf5.to.df(site, files, data.type, meas.name, var.name, bgn.month,
+  end.month, time.agr, save.dir, overwrite = FALSE)
 }
 \arguments{
 \item{site}{Parameter of class character. The 4-letter NEON site code that the data is for.}
-
-\item{hdf5.file}{Parameter of class character. The path to the hdf5 file to convert.}
 
 \item{meas.name}{Parameter of class character. The name of the measurement in the hdf5 file
 to be extracted.}
@@ -18,6 +17,8 @@ to be extracted.}
 
 \item{save.dir}{Optional. If specified a CSV of the extracted data will be saved to the
 input directory.}
+
+\item{hdf5.file}{Parameter of class character. The path to the hdf5 file to convert.}
 }
 \value{
 A data table of mesurements for the requested data product.

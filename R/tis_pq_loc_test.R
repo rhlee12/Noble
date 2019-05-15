@@ -35,7 +35,7 @@ tis.pq.loc.test<-function(site, dp.id,
                           prin.vars,  bgn.month,
                           end.month, save.dir,
                           time.agr = 30, package="basic",
-                          q.th, v.th){
+                          q.th, v.th, exclude.dff=F){
 
     options(stringsAsFactors = FALSE)
 
@@ -98,7 +98,7 @@ tis.pq.loc.test<-function(site, dp.id,
 
                 data.quant<-round(100*(num.data/(all.data)), digits = 2)
                 ### Validity/Flagging testing
-                if(dp.id=="DP1.00001.001"){
+                if(dp.id=="DP1.00001.001"&exclude.dff){
                     data.valid=.wind.validity(data.quant=data.quant, data=sensor.data) # testing to exclude the
                 }else{
                 num.qf.fail<-sum(sensor.data[,qf.indx]==1, na.rm=TRUE)

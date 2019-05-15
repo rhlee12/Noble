@@ -5,7 +5,7 @@
 \title{Downloads and performs process quality checks on NEON data}
 \usage{
 tis.pq.loc.test(site, dp.id, prin.vars, bgn.month, end.month, save.dir,
-  time.agr = 30, package = "basic", q.th, v.th)
+  time.agr = 30, package = "basic", q.th, v.th, exclude.dff = F)
 }
 \arguments{
 \item{site}{Parameter of class character. The NEON site data should be downloaded for.}

@@ -27,13 +27,17 @@
 #
 ##############################################################################################
 
-hdf5.to.df=function(site, hdf5.file, meas.name, time.agr, save.dir){
+hdf5.to.df=function(site, files, data.type, meas.name, var.name, bgn.month, end.month, time.agr, save.dir, overwrite=FALSE){
+    library(magrittr)
 
+    ### INPUT CHECKING
     ok.time=c(1, 30)
 
-    ok.meas=c("co2Stor","fluxHeatSoil", "h2oSoilVol", "h2oStor", "irgaCo2",
-              "irgaH2o", "isoCo2", "isoH2o", "presBaro", "radiNet", "soni",
-              "soniAmrs", "tempAirLvl", "tempAirTop", "tempSoil", "co2Turb", "amrs", "co2Stor")
+    ok.meas=c("amrs", "co2Stor", "co2Turb", "fluxHeatSoil", "h2oSoilVol", "h2oStor",
+              "h2oTurb", "isoCo2", "isoH2o", "presBaro", "radiNet", "soni",
+              "tempAirLvl", "tempAirTop", "tempSoil")
+    #ok.vars=c()
+
     if(!meas.name %in% ok.meas){
         message("Invalid measurement name selected. Please enter one of the following:")
         stop(print(ok.meas))
@@ -42,38 +46,45 @@ hdf5.to.df=function(site, hdf5.file, meas.name, time.agr, save.dir){
         stop("Invalid temporal aggregation input. Please enter either 1 or 30.")
     }
 
-    temp=rhdf5::h5read(file=hdf5.file, name=site)
-    top.data=temp$dp01$data[names(temp$dp01$data)==meas.name][[1]]
-    data=(top.data[grepl(x = names(top.data), pattern = paste0("*",time.agr,"m"))][[1]])
-    for(d in 1:length(names(data))){
-       colnames(data[[d]])[!grepl(x = colnames(data[[d]]), pattern = "time", ignore.case = T)]=paste0(colnames(data[[d]])[!grepl(x = colnames(data[[d]]), pattern = "time", ignore.case = T)], ".", names(data)[d])
-    }
-    qf.top=temp$dp01$qfqm[names(temp$dp01$data)==meas.name][[1]]
-    qf=qf.top[grepl(x = names(qf.top), pattern = paste0("*",time.agr,"m"))][[1]]
-    for(q in 1:length(names(qf))){
-        colnames(qf[[q]])[!grepl(x = colnames(qf[[q]]), pattern = "time", ignore.case = T)]=paste0(colnames(qf[[q]])[!grepl(x = colnames(qf[[q]]), pattern = "time", ignore.case = T)], ".", names(qf)[q])
-    }
-    # uncert.top=temp$dp01$ucrt[names(temp$dp01$data)==meas.name][[1]]
-    # unct=uncert.top[grepl(x = names(uncert.top), pattern = paste0("*",time.agr,"m"))][[1]]
-    # for(u in 1:length(names(unct))){
-    #     colnames(unct[[u]])[!grepl(x = colnames(unct[[u]]), pattern = "time", ignore.case = T)]=paste0(colnames(unct[[u]])[!grepl(x = colnames(unct[[u]]), pattern = "time", ignore.case = T)], ".", names(unct)[u])
-    # }
+    ### FILE NAME PARAMETERS
+    start.date=paste0(bgn.month, "-01")
+    end.date=Noble::last.day.time(end.month = end.month, time.agr = time.agr)
 
-    all=Reduce(function(x, y) merge(x, y, all=TRUE, by="timeBgn"), c(data, qf)) #, unct
-    end.times=which(grepl(pattern = "timeEnd*", x = colnames(all)))
-    all=all[-end.times]
-    colnames(all)=gsub(x = colnames(all), pattern = "\\.y", replacement = "")
-    colnames(all)=gsub(x = colnames(all), pattern = "\\.x", replacement = "")
-    startDate=as.Date(all$timeBgn[1])
-    endDate=as.Date(all$timeBgn[length(all$timeBgn)])
+    file.out=paste0(save.dir, "/", "EC_", data.type,"_", meas.name, "_", var.name, "_", start.date, "-", substr(end.date, start = 1, stop = 10), ".csv")
+    print(file.out)
+    ### GENERATE NEW FLAT DF
+    if(!file.exists(file.out)|all(file.exists(file.out), overwrite)){
 
-    if(!missing(save.dir)){
-        if(dir.exists(save.dir)){
-            utils::write.csv(x=all, file = paste0(.data.route(site = site, save.dir = save.dir), "/", meas.name, "_", site, "_", startDate, "-", endDate, ".csv"), row.names = F)
+        top.ml=Noble::tis_site_config$num.of.mls[Noble::tis_site_config$site.id==site]
+        # GENERATE H.V.T GROUP MEETING
+
+        hor.ver.tmi=paste0("000_0", top.ml, "0_", stringr::str_pad(string = time.agr, width = 2, side = "left", pad = "0"), "m")
+troubleshoot=function(hdf5.file){
+    print(hdf5.file)
+    try(rhdf5::h5read(file=hdf5.file, paste0(site,'/dp01/', data.type, '/',meas.name,'/', hor.ver.tmi, "/", var.name)))
+}
+        ec.list=lapply(files, troubleshoot)
+
+        ec.list=ec.list[lapply(ec.list, class)=="data.frame"]
+
+        ec.data=do.call(plyr::rbind.fill, ec.list)
+        clean.times=function(x){
+            x %>%
+                gsub(pattern = "T|Z", replacement = " ") %>%
+                trimws() %>%
+                as.POSIXct(tz = "UTC", format="%Y-%m-%d %H:%M:%S") -> out
+            return(out)
         }
-        if(!dir.exists(save.dir)){
-            warning("'save.dir' is not valid- no file saved.")
-        }
+        ec.data$timeBgn=clean.times(ec.data$timeBgn)
+
+        ref.seq=data.frame(startDateTime=Noble:::help.time.seq(from = start.date, to = end.date, time.agr = time.agr))
+        out=merge(x=ref.seq, y = ec.data, by.x = "startDateTime", by.y = "timeBgn", all.x = TRUE)
+
+        write.csv(x = out, file = file.out, row.names = FALSE)
+
+    }else{
+        out=read.csv(file.out, stringsAsFactors = FALSE)
     }
-    return(all)
+    rhdf5::h5closeAll()
+    return(out)
 }

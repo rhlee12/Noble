@@ -4,8 +4,8 @@
 \alias{co2.pq.test}
 \title{Perform A Commissioning PQ Test on IRGA CO2 Concentration Data}
 \usage{
-co2.pq.test(site = site, bgn.month, end.month, save.dir, q.th = 95,
-  v.th = 88.1)
+co2.pq.test(site = site, bgn.month, end.month, save.dir, q.th = 90,
+  v.th = 80, overwrite = FALSE)
 }
 \arguments{
 \item{site}{Parameter of class character. The NEON site data should be downloaded for.}
